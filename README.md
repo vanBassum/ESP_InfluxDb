@@ -27,9 +27,6 @@ Influx::Point("MyMeasurement")
   .Post(client);
 ```
 
-
-Certainly, you can emphasize the TLS considerations in the README. Here's an updated section for that:
-
 ## TLS Considerations
 
 For the time being, TLS is not enabled in this library. Altought adding TLS is expected to be a straightforward process, it hasn't been implemented yet. Attempts to use the X509 bundle for TLS verification encountered memory constraints.
