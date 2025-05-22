@@ -25,11 +25,34 @@ namespace esphome
             }
         }
 
-        void InfluxDBWriter::on_sensor_update(sensor::Sensor *obj, float state)
+        void InfluxDBWriter::loop()
         {
-            if (!std::isfinite(state) || this->http_ == nullptr)
+            if (this->http_ == nullptr || pending_lines_.empty())
                 return;
 
+            std::string body;
+
+            // Pop up to MAX_QUEUE_SIZE entries
+            for (size_t i = 0; i < MAX_QUEUE_SIZE && !pending_lines_.empty(); i++)
+            {
+                body += pending_lines_.front() + "\n";
+                pending_lines_.pop_front(); // Safe: modifies only one item at a time
+            }
+
+            std::string full_url = this->url_ + "?org=" + this->org_ + "&bucket=" + this->bucket_ + "&precision=s";
+
+            std::list<esphome::http_request::Header> headers = {
+                {"Authorization", "Token " + this->token_},
+                {"Content-Type", "text/plain"}};
+
+            ESP_LOGD(TAG, "Sending up to %d lines to InfluxDB", MAX_QUEUE_SIZE);
+            this->http_->post(full_url, body, headers);
+        }
+
+        void InfluxDBWriter::on_sensor_update(sensor::Sensor *obj, float state)
+        {
+            if (!std::isfinite(state))
+                return;
 
             time_t timestamp = time(nullptr);
 
@@ -41,15 +64,14 @@ namespace esphome
                                " value=" + esphome::to_string(state) +
                                " " + esphome::to_string(timestamp);
 
-            std::string full_url = this->url_ + "?org=" + this->org_ + "&bucket=" + this->bucket_ + "&precision=s";
+            if (pending_lines_.size() >= MAX_QUEUE_SIZE)
+            {
+                // Discard oldest
+                pending_lines_.pop_front();
+            }
 
-            std::list<esphome::http_request::Header> headers = {
-                {"Authorization", "Token " + this->token_},
-                {"Content-Type", "text/plain"}};
-
-            ESP_LOGD(TAG, "Sending to InfluxDB: %s", line.c_str());
-
-            this->http_->post(full_url, line, headers);
+            pending_lines_.push_back(std::move(line));
+            ESP_LOGD(TAG, "Queued InfluxDB line: %s", pending_lines_.back().c_str());
         }
 
     } // namespace influxdb

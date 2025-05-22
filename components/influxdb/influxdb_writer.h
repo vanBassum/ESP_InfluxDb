@@ -3,6 +3,7 @@
 #include "esphome/core/component.h"
 #include "esphome/components/http_request/http_request.h"
 #include "esphome/components/sensor/sensor.h"
+#include <deque>
 
 namespace esphome
 {
@@ -15,6 +16,7 @@ namespace esphome
             InfluxDBWriter() = default;
 
             void setup() override;
+            void loop() override;
             float get_setup_priority() const override { return setup_priority::AFTER_WIFI; }
 
             void set_url(const std::string &url) { this->url_ = url; }
@@ -32,6 +34,9 @@ namespace esphome
             std::string org_;
             std::string bucket_;
             std::string measurement_;
+
+            std::deque<std::string> pending_lines_;
+            static constexpr size_t MAX_QUEUE_SIZE = 10;
 
             esphome::http_request::HttpRequestComponent *http_{nullptr};
         };
