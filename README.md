@@ -1,51 +1,41 @@
-# ESP_InfluxDb
 
-ESP_InfluxDb is a library designed to facilitate the seamless integration of InfluxDb V2 with the ESP-IDF framework. This library simplifies the process of pushing data to InfluxDb by leveraging the ESP-IDF HTTP client.
+# ESPHome InfluxDB Writer Component
 
-## Motivation
+This repository contains a custom ESPHome component that posts sensor data to an InfluxDB 2.x instance using HTTP.
 
-While attempting to find a suitable library for ESP-IDF to work with InfluxDb V2, I encountered a lack of comprehensive solutions. Although I initially tried porting an Arduino library, the process proved cumbersome due to heavy reliance on Arduino-specific APIs. To address this, I opted to create a new library from the ground up, utilizing the ESP-IDF HTTP client for optimal compatibility.
 
-## Usage
+---
 
-To get started quickly, here's a minimal code example:
+## Features
 
-```cpp
-#include "InfluxDb.h"
+- Subscribes to all non-internal sensors in ESPHome.
+- Sends sensor data in [InfluxDB line protocol](https://docs.influxdata.com/influxdb/latest/reference/syntax/line-protocol/) format.
+- Includes timestamps in seconds.
 
-#define INFLUXDB_URL "MyUrl.com"
-#define INFLUXDB_TOKEN "MyToken"
-#define INFLUXDB_ORG "MyOrganisation"
-#define INFLUXDB_BUCKET "MyBucket"
 
-Influx::Client client(INFLUXDB_URL, INFLUXDB_TOKEN, INFLUXDB_ORG, INFLUXDB_BUCKET);
 
-Influx::Point("MyMeasurement")
-  .AddTag("Sensor", "DS18B20")		
-  .AddField("Temp", 12.6f)
-  .SetTimestamp(1697727036000000000)
-  .Post(client);
+## Configuration Example
+
+```yaml
+esphome:
+  name: myInflux
+  platform: esp32
+  board: esp32-c3-devkitm-1
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+http_request:
+  id: http_component
+  useragent: esphome-influx
+  timeout: 10s
+
+influxdb:
+  url: !secret influxdb_url
+  token: !secret influxdb_token
+  org: !secret influxdb_org
+  bucket: !secret influxdb_bucket
+  measurement: esp_data
+  http_request_id: http_component
 ```
-
-## TLS Considerations
-
-For the time being, TLS is not enabled in this library. Altought adding TLS is expected to be a straightforward process, it hasn't been implemented yet. Attempts to use the X509 bundle for TLS verification encountered memory constraints.
-
-During testing, you can disable TLS verification by following these steps:
-
-1. Open the MenuConfig.
-2. Under ESP-TLS, enable 'Allow potentially insecure options.'
-3. Under ESP-TLS, enable 'Skip server certificate verification by default.'
-
-Keep in mind that this is for testing purposes only, and in a production environment, enabling TLS verification is crucial for security. Contributions to implement TLS or any other enhancements are welcome, and your feedback is highly appreciated!
-
-## Querying Data
-
-At present, querying data from InfluxDb is not a feature included in this library. While it's a potential addition for the future, it's not in the current development scope. If querying functionality is crucial for your project, you may need to explore alternative solutions or consider contributing to the library's development.
-
-## TODO
-
-- [x] Write data points to InfluxDb V2
-- [ ] Add TLS verification
-
-Feel free to contribute or provide feedback to help improve the functionality and robustness of this library. Your input is highly valued!
